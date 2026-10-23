@@ -11,19 +11,32 @@ int main() {
 // Decided to try Data-Orented Design
 // Pure data and pure behavior
 
-template <typename T, std::size_t N = 64> struct ring_buffer {
-        std::array<T, N> buf;
+// template <typename T, std::size_t N = 4> struct ring_buffer {
+template <typename T> struct ring_buffer {
+        // static constexpr std::size_t capacity = 2 << N;
+        std::array<T, 256> buf;
+        const uint16_t capacity = 256;
 
-        int headIdx = 0;
-        int tailIdx = 0;
+        // Using uint8_t just for size constraint
+        std::uint8_t headIdx = 0;
+        std::uint8_t tailIdx = 0;
 };
 
 template <typename T, std::size_t N = 64>
-void ring_buffer_push(ring_buffer<T, N> &buf, T ins) {
+void ring_buffer_push(ring_buffer<T> &buf, T ins) {
         // write the push logic
+
+        // Check if full
+        // What if u8 buffer overflows?
+        //
 }
 
 template <typename T, std::size_t N = 64>
-T ring_buffer_pop(ring_buffer<T, N> &buf) {
+T ring_buffer_pop(ring_buffer<T> &buf) {
         // write the pop logic
+
+        // Check if empty
+        if (buf->tailIdx == buf->headIdx) {
+                return;
+        }
 }
