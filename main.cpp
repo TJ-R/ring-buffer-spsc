@@ -1,5 +1,7 @@
 #include <array>
 #include <atomic>
+#include <iostream>
+#include <optional>
 #include <thread>
 
 // Decided to try Data-Orented Design
@@ -35,29 +37,28 @@ void ring_buffer_push(ring_buffer<T> &rb, T ins, uint8_t &localHead) {
         // Check if full
         // should handle overflows fine
 
-        if (rb->tailIdx.load(std::memory_order_relaxed) - localHead ==
-            rb->capacity) {
+        if (rb.tailIdx.load(std::memory_order_relaxed) - localHead ==
+            rb.capacity) {
                 // update headIdx only when full since it is expensive to
                 // to do. I.e. let it be stale no risk since tail will always be
                 // "ahead" of the head. This is so we can reduce cache misses
-                localHead = rb->headIdx.load(std::memory_order_acquire);
+                localHead = rb.headIdx.load(std::memory_order_acquire);
                 return;
         }
 
         // Insert value at tail
-        rb->buf[rb->tailIdx.load(std::memory_order_relaxed) & rb->capacity] =
-            ins;
+        rb.buf[rb.tailIdx.load(std::memory_order_relaxed) & rb.capacity] = ins;
 
         // Move tail
-        rb->tailIdx.store(rb->tailIdx.load(std::memory_order_relaxed) + 1,
-                          std::memory_order_release);
+        rb.tailIdx.store(rb.tailIdx.load(std::memory_order_relaxed) + 1,
+                         std::memory_order_release);
 
         return;
 };
 
 // template <typename T, std::size_t N = 64>
 template <typename T>
-T ring_buffer_pop(ring_buffer<T> &rb, uint8_t &localTail) {
+std::optional<T> ring_buffer_pop(ring_buffer<T> &rb, uint8_t &localTail) {
         // write the pop logic
 
         // consumer thread can do relaxed read to head index
@@ -66,24 +67,50 @@ T ring_buffer_pop(ring_buffer<T> &rb, uint8_t &localTail) {
         // consumer does a release on edit to the head index update
 
         // Check if empty
-        if (localTail == rb->headIdx.load(std::memory_order_relaxed)) {
+        if (localTail == rb.headIdx.load(std::memory_order_relaxed)) {
                 // Same as push
-                localTail = rb->tailIdx.load(std::memory_order_acquire);
-                return;
+                localTail = rb.tailIdx.load(std::memory_order_acquire);
+                return NULL;
         }
 
         T val =
-            rb->buf[rb->headIdx.load(std::memory_order_relaxed) & rb->capacity];
+            rb.buf[rb.headIdx.load(std::memory_order_relaxed) & rb.capacity];
 
-        rb->headIdx.store(rb->headIdx.load(std::memory_order_relaxed) + 1,
-                          std::memory_order_release);
+        rb.headIdx.store(rb.headIdx.load(std::memory_order_relaxed) + 1,
+                         std::memory_order_release);
 
         return val;
 };
 
-int main() {
-        std::thread t1;
-        std::thread t2;
+void doSomeConsuming(ring_buffer<int> &rb) {
+        uint8_t localTail = 0;
+        uint8_t count = 0;
 
-        // x = x + 1;
+        while (count < 101) {
+                std::optional<int> val = ring_buffer_pop(rb, localTail);
+                if (val.has_value()) {
+                        std::cout << "Consumer got " << val.value() << "\n";
+                } else {
+                        std::cout << "Buffer was empty!" << "\n";
+                }
+                count++;
+        }
+}
+
+void doSomeProducing(ring_buffer<int> &rb) {
+        uint8_t localHead = 0;
+        int count = 0;
+
+        while (count < 101) {
+                ring_buffer_push(rb, count, localHead);
+                std::cout << "Producer pushed " << count << "\n";
+                count++;
+        }
+}
+
+int main() {
+        ring_buffer<int> rb;
+
+        std::thread producer(doSomeConsuming, std::ref(rb));
+        std::thread consumer(doSomeProducing, std::ref(rb));
 }
