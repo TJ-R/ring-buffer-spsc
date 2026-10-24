@@ -121,10 +121,16 @@ int main() {
 
         // Then Join
         producer.join();
-        producer.join();
+        consumer.join();
 
         // Does not block the two threads from running at the same time.
         // Need to join or program will crash. C++20 jthread solves this
         // using std::thread to better understand the things that
         // std::jthread solves
 }
+
+// TODO WRITE SOME TESTING CODE TO MAKE SURE THIS WORKS PROPERLY
+// NO USING COUT
+//
+// ALSO WRITE THE ATOMIC READS TO A LOCAL INSTEAD OF CALLING MULTIPLE ATOMIC
+// READS
