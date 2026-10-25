@@ -159,9 +159,3 @@ int main() {
         std::cout << "Starting result test\n";
         checkConsumeTracker(consumeTracker);
 }
-
-// TODO WRITE SOME TESTING CODE TO MAKE SURE THIS WORKS PROPERLY
-// NO USING COUT
-//
-// ALSO WRITE THE ATOMIC READS TO A LOCAL INSTEAD OF CALLING MULTIPLE ATOMIC
-// READS
