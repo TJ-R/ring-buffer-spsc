@@ -116,7 +116,7 @@ void checkConsumeTracker(std::vector<int> vec) {
         // Just check to see if every value in order works
         int expectedCount = 100000000;
         int count = 0;
-        for (int i = 0; i < vec.size(); i++) {
+        for (std::size_t i = 0; i < vec.size(); i++) {
                 if (i != vec[i]) {
                         std::cout << "--------------------\n";
                         std::cout << "Values did not match\n";
@@ -139,8 +139,9 @@ void checkConsumeTracker(std::vector<int> vec) {
 int main() {
         ring_buffer<int> rb;
 
+        std::vector<int> consumeTracker;
+        consumeTracker.reserve(100000000);
         for (int i = 0; i < 5; i++) {
-                std::vector<int> consumeTracker;
                 // Start thread work
                 auto start = std::chrono::steady_clock::now();
                 std::thread producer(doSomeProducing, std::ref(rb));
@@ -163,5 +164,6 @@ int main() {
                 // Checking to see if ring buffer is working ;
                 // std::cout << "Starting result test\n";
                 // checkConsumeTracker(consumeTracker);
+                consumeTracker.clear();
         }
 }

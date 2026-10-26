@@ -23,3 +23,31 @@ at which metrics are valuable for this kind of project.
 
 Work: Adding 100,000,000 values to the queue via the producer and consumer\
 should read all of these out in order then push to vector
+
+#### Time to run as of 10/25/26
+
+##### With vector::reserve
+
+Starting threads
+Duration of work: 2280.02
+Starting threads
+Duration of work: 2254.86
+Starting threads
+Duration of work: 2169.36
+Starting threads
+Duration of work: 2530.55
+Starting threads
+Duration of work: 2278.92
+
+##### Without vector::reserve
+
+Starting threads
+Duration of work: 2505.49
+Starting threads
+Duration of work: 2525.29
+Starting threads
+Duration of work: 2401.74
+Starting threads
+Duration of work: 2352.39
+Starting threads
+Duration of work: 2433.15
