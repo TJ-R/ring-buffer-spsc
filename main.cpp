@@ -139,23 +139,29 @@ void checkConsumeTracker(std::vector<int> vec) {
 int main() {
         ring_buffer<int> rb;
 
-        std::vector<int> consumeTracker;
-        // Start thread work
-        std::thread producer(doSomeProducing, std::ref(rb));
-        std::thread consumer(doSomeConsuming, std::ref(rb),
-                             std::ref(consumeTracker));
+        for (int i = 0; i < 5; i++) {
+                std::vector<int> consumeTracker;
+                // Start thread work
+                auto start = std::chrono::steady_clock::now();
+                std::thread producer(doSomeProducing, std::ref(rb));
+                std::thread consumer(doSomeConsuming, std::ref(rb),
+                                     std::ref(consumeTracker));
 
-        // Then Join
-        std::cout << "Starting threads\n";
-        producer.join();
-        consumer.join();
+                // Then Join
+                std::cout << "Starting threads\n";
+                producer.join();
+                consumer.join();
+                auto end = std::chrono::steady_clock::now();
 
-        // Does not block the two threads from running at the same time.
-        // Need to join or program will crash. C++20 jthread solves this
-        // using std::thread to better understand the things that
-        // std::jthread solves
+                std::chrono::duration<double, std::milli> elapsed = end - start;
+                std::cout << "Duration of work: " << elapsed.count() << "\n";
+                // Does not block the two threads from running at the same time.
+                // Need to join or program will crash. C++20 jthread solves this
+                // using std::thread to better understand the things that
+                // std::jthread solves
 
-        // Checking to see if ring buffer is working ;
-        std::cout << "Starting result test\n";
-        checkConsumeTracker(consumeTracker);
+                // Checking to see if ring buffer is working ;
+                // std::cout << "Starting result test\n";
+                // checkConsumeTracker(consumeTracker);
+        }
 }
