@@ -17,6 +17,10 @@ Also am trying to get a better understanding of performance / memory profiling.
 So below there will probably so good / useless metrics as I get a better grasp\
 at which metrics are valuable for this kind of project.
 
+My system is x86 which from my research fixes memory ordering at lot of times\
+making less room for error then an ARM based system. Does make it a little difficult\
+to determine performance imporvements
+
 ## Performance Metrics
 
 ### Consecutive Iterations \ (time diff between subsequent runs of the same work back to back)
@@ -103,5 +107,44 @@ Duration of work: 2416.09
 Consumer Result is good.
 Starting threads
 Duration of work: 2103.8
+Consumer Result is good.
+
+##### Moved capacity on own cache line
+
+Best set of runs yet but I reran another 3 sets and times were about same
+as the runs above so I can't verifiably say any improvement
+
+Head address as int 140732126601920
+Tail address as int 140732126601984
+First Int address as int 140732126602048
+Starting threads
+Duration of work: 2337.65
+Consumer Result is good.
+Starting threads
+Duration of work: 1551.28
+Consumer Result is good.
+Starting threads
+Duration of work: 2404.43
+Consumer Result is good.
+Starting threads
+Duration of work: 1575.51
+Consumer Result is good.
+Starting threads
+Duration of work: 2306.65
+Consumer Result is good.
+Starting threads
+Duration of work: 1754.3
+Consumer Result is good.
+Starting threads
+Duration of work: 1644.58
+Consumer Result is good.
+Starting threads
+Duration of work: 2293.91
+Consumer Result is good.
+Starting threads
+Duration of work: 2379.17
+Consumer Result is good.
+Starting threads
+Duration of work: 2295.1
 Consumer Result is good.
 

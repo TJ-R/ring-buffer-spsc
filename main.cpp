@@ -31,7 +31,9 @@ template <typename T> struct ring_buffer {
         // a line with tailIdx on first 15 values
         alignas(
             std::hardware_destructive_interference_size) std::array<T, 128> buf;
-        const uint8_t capacity = 128;
+
+        alignas(std::hardware_destructive_interference_size)
+            const uint8_t capacity = 128;
 };
 
 // template <typename T, std::size_t N = 64>
