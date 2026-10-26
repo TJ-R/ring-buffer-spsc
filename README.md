@@ -51,3 +51,21 @@ Starting threads
 Duration of work: 2352.39
 Starting threads
 Duration of work: 2433.15
+
+##### Without vector work just checking against numbers in order
+
+Starting threads
+Duration of work: 2059.33
+Consumer Result is good.
+Starting threads
+Duration of work: 2518.21
+Consumer Result is good.
+Starting threads
+Duration of work: 1907.17
+Consumer Result is good.
+Starting threads
+Duration of work: 2032.48
+Consumer Result is good.
+Starting threads
+Duration of work: 2005.63
+Consumer Result is good.

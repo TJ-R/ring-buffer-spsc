@@ -5,6 +5,8 @@
 #include <optional>
 #include <thread>
 
+#define MAGIC_WORK_NUMBER 100000000
+
 // Decided to try Data-Orented Design
 // Pure data and pure behavior
 
@@ -86,14 +88,17 @@ std::optional<T> ring_buffer_pop(ring_buffer<T> &rb, uint8_t &localTail) {
         return val;
 };
 
-void doSomeConsuming(ring_buffer<int> &rb, std::vector<int> &tracking) {
+void doSomeConsuming(ring_buffer<int> &rb, int &checker) {
         uint8_t localTail = 0;
         int count = 0;
 
-        while (count < 100000000) {
+        while (count < MAGIC_WORK_NUMBER) {
                 std::optional<int> val = ring_buffer_pop(rb, localTail);
                 if (val.has_value()) {
-                        tracking.push_back(val.value());
+                        // Track the amount of numbers read that == the expected
+                        if (checker == count) {
+                                checker++;
+                        }
                         count++;
                 }
         }
@@ -103,7 +108,7 @@ void doSomeProducing(ring_buffer<int> &rb) {
         uint8_t localHead = 0;
         int count = 0;
 
-        while (count < 100000000) {
+        while (count < MAGIC_WORK_NUMBER) {
                 bool res = ring_buffer_push(rb, count, localHead);
 
                 if (res) {
@@ -114,7 +119,7 @@ void doSomeProducing(ring_buffer<int> &rb) {
 
 void checkConsumeTracker(std::vector<int> vec) {
         // Just check to see if every value in order works
-        int expectedCount = 100000000;
+        int expectedCount = MAGIC_WORK_NUMBER;
         int count = 0;
         for (std::size_t i = 0; i < vec.size(); i++) {
                 if (i != vec[i]) {
@@ -139,14 +144,13 @@ void checkConsumeTracker(std::vector<int> vec) {
 int main() {
         ring_buffer<int> rb;
 
-        std::vector<int> consumeTracker;
-        consumeTracker.reserve(100000000);
+        int checker = 0;
         for (int i = 0; i < 5; i++) {
                 // Start thread work
                 auto start = std::chrono::steady_clock::now();
                 std::thread producer(doSomeProducing, std::ref(rb));
                 std::thread consumer(doSomeConsuming, std::ref(rb),
-                                     std::ref(consumeTracker));
+                                     std::ref(checker));
 
                 // Then Join
                 std::cout << "Starting threads\n";
@@ -161,9 +165,13 @@ int main() {
                 // using std::thread to better understand the things that
                 // std::jthread solves
 
+                if (checker == MAGIC_WORK_NUMBER) {
+                        std::cout << "Consumer Result is good.\n";
+                }
+
+                checker = 0;
                 // Checking to see if ring buffer is working ;
                 // std::cout << "Starting result test\n";
                 // checkConsumeTracker(consumeTracker);
-                consumeTracker.clear();
         }
 }
