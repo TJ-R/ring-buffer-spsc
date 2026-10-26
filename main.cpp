@@ -27,7 +27,10 @@ template <typename T> struct ring_buffer {
             std::atomic<uint8_t> tailIdx = 0;
 
         // static constexpr std::size_t capacity = 2 << N;
-        std::array<T, 128> buf;
+        // Start this on its own cache line as well other wise it shares
+        // a line with tailIdx on first 15 values
+        alignas(
+            std::hardware_destructive_interference_size) std::array<T, 128> buf;
         const uint8_t capacity = 128;
 };
 
@@ -144,8 +147,23 @@ void checkConsumeTracker(std::vector<int> vec) {
 int main() {
         ring_buffer<int> rb;
 
+        std::atomic<uint8_t> *headPtr = &rb.headIdx;
+        std::atomic<uint8_t> *tailPtr = &rb.tailIdx;
+        int *firstIntPtr = &rb.buf[0];
+
+        std::uintptr_t headIntAddress =
+            reinterpret_cast<std::uintptr_t>(headPtr);
+        std::uintptr_t tailIntAddress =
+            reinterpret_cast<std::uintptr_t>(tailPtr);
+        std::uintptr_t firstIntAddress =
+            reinterpret_cast<std::uintptr_t>(firstIntPtr);
+
+        std::cout << "Head address as int " << headIntAddress << "\n";
+        std::cout << "Tail address as int " << tailIntAddress << "\n";
+        std::cout << "First Int address as int " << firstIntAddress << "\n";
+
         int checker = 0;
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++) {
                 // Start thread work
                 auto start = std::chrono::steady_clock::now();
                 std::thread producer(doSomeProducing, std::ref(rb));

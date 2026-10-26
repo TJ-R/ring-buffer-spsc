@@ -69,3 +69,39 @@ Consumer Result is good.
 Starting threads
 Duration of work: 2005.63
 Consumer Result is good.
+
+##### Moved buf on own cache line (not as much imporvement as I hoped)
+Head address as int 140729162929664
+Tail address as int 140729162929728
+First Int address as int 140729162929792
+Starting threads
+Duration of work: 2039.22
+Consumer Result is good.
+Starting threads
+Duration of work: 2035.78
+Consumer Result is good.
+Starting threads
+Duration of work: 2050.67
+Consumer Result is good.
+Starting threads
+Duration of work: 2498.03
+Consumer Result is good.
+Starting threads
+Duration of work: 2429.2
+Consumer Result is good.
+Starting threads
+Duration of work: 2419.03
+Consumer Result is good.
+Starting threads
+Duration of work: 2119.53
+Consumer Result is good.
+Starting threads
+Duration of work: 2115.8
+Consumer Result is good.
+Starting threads
+Duration of work: 2416.09
+Consumer Result is good.
+Starting threads
+Duration of work: 2103.8
+Consumer Result is good.
+
