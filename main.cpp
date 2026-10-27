@@ -10,14 +10,12 @@
 // Decided to try Data-Orented Design
 // Pure data and pure behavior
 
-// template <typename T, std::size_t N = 4> struct ring_buffer {
-// Want to generalize this so capacity is a power of two only
-// but unsure how to make the idx maximum size match that power of two.
-template <typename T> struct ring_buffer {
+template <typename T, std::size_t N> struct ring_buffer {
+        static_assert(N > 0 && (N & (N - 1)) == 0,
+                      "N must be power of 2 smaller than size_t.");
         // Using uint8_t just for size constraint
         //
         // both counters are on separate cache lines
-
         // Starts on cacheline as per hardware descripiton
         alignas(std::hardware_destructive_interference_size)
             std::atomic<uint8_t> headIdx = 0;
@@ -37,8 +35,8 @@ template <typename T> struct ring_buffer {
 };
 
 // template <typename T, std::size_t N = 64>
-template <typename T>
-bool ring_buffer_push(ring_buffer<T> &rb, T ins, uint8_t &localHead) {
+template <typename T, std::size_t N>
+bool ring_buffer_push(ring_buffer<T, N> &rb, T ins, uint8_t &localHead) {
         // write the push logic
 
         // producer thread can do relaxed read to tail index
@@ -76,9 +74,8 @@ bool ring_buffer_push(ring_buffer<T> &rb, T ins, uint8_t &localHead) {
         return true;
 };
 
-// template <typename T, std::size_t N = 64>
-template <typename T>
-std::optional<T> ring_buffer_pop(ring_buffer<T> &rb, uint8_t &localTail) {
+template <typename T, std::size_t N>
+std::optional<T> ring_buffer_pop(ring_buffer<T, N> &rb, uint8_t &localTail) {
         // write the pop logic
 
         // consumer thread can do relaxed read to head index
@@ -105,7 +102,8 @@ std::optional<T> ring_buffer_pop(ring_buffer<T> &rb, uint8_t &localTail) {
         return val;
 };
 
-void doSomeConsuming(ring_buffer<int> &rb) {
+template <typename T, std::size_t N>
+void doSomeConsuming(ring_buffer<T, N> &rb) {
         uint8_t localTail = 0;
         int count = 0;
 
@@ -118,7 +116,8 @@ void doSomeConsuming(ring_buffer<int> &rb) {
         }
 }
 
-void doSomeProducing(ring_buffer<int> &rb) {
+template <typename T, std::size_t N>
+void doSomeProducing(ring_buffer<T, N> &rb) {
         uint8_t localHead = 0;
         int count = 0;
 
@@ -132,13 +131,16 @@ void doSomeProducing(ring_buffer<int> &rb) {
 }
 
 int main() {
-        ring_buffer<int> rb;
+        ring_buffer<int, 1ULL << 63> rb;
 
         for (int i = 0; i < 10; i++) {
                 // Start thread work
                 auto start = std::chrono::steady_clock::now();
-                std::thread producer(doSomeProducing, std::ref(rb));
-                std::thread consumer(doSomeConsuming, std::ref(rb));
+                // Unsigned Long Long 1 shifted left 63 times, 2^63
+                std::thread producer(doSomeProducing<int, 1ULL << 63>,
+                                     std::ref(rb));
+                std::thread consumer(doSomeConsuming<int, 1ULL << 63>,
+                                     std::ref(rb));
 
                 // Then Join
                 producer.join();
