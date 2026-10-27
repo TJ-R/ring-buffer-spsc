@@ -14,7 +14,7 @@ template <typename T, std::size_t N> struct ring_buffer {
         static_assert(N > 0 && (N & (N - 1)) == 0,
                       "N must be power of 2 smaller than size_t.");
 
-        static_assert(N < (1ULL << 32), "N must be smaller than 2^32");
+        static_assert(N < (1ULL << 32), "N < (1ULL << 32)");
 
         // Might as well use size_t since cache lines are 64 bytes apart
         // both counters are on separate cache lines
@@ -48,10 +48,10 @@ bool ring_buffer_push(ring_buffer<T, N> &rb, T ins, size_t &localHead) {
 
         // Check if full
         // should handle overflows fine
-        uint8_t tailIdx = rb.tailIdx.load(std::memory_order_relaxed);
+        size_t tailIdx = rb.tailIdx.load(std::memory_order_relaxed);
 
         // Update local first to see if actually full
-        if (static_cast<uint8_t>(tailIdx - localHead) == rb.capacity) {
+        if (static_cast<size_t>(tailIdx - localHead) == rb.capacity) {
                 // update headIdx only when full since it is expensive to
                 // to do. I.e. let it be stale no risk since tail will always be
                 // "ahead" of the head. This is so we can reduce cache misses
@@ -60,7 +60,7 @@ bool ring_buffer_push(ring_buffer<T, N> &rb, T ins, size_t &localHead) {
         }
 
         // Check again
-        if (static_cast<uint8_t>(tailIdx - localHead) == rb.capacity) {
+        if (static_cast<size_t>(tailIdx - localHead) == rb.capacity) {
                 // update headIdx only when full since it is expensive to
                 // to do. I.e. let it be stale no risk since tail will always be
                 // "ahead" of the head. This is so we can reduce cache misses
@@ -106,15 +106,14 @@ std::optional<T> ring_buffer_pop(ring_buffer<T, N> &rb, size_t &localTail) {
 
 template <typename T, std::size_t N>
 void doSomeConsuming(ring_buffer<T, N> &rb, int &checker) {
-        size_t localTail = 0;
+        size_t localTail = rb.tailIdx.load(std::memory_order_acquire);
         int count = 0;
 
         while (count < MAGIC_WORK_NUMBER) {
                 std::optional<int> val = ring_buffer_pop(rb, localTail);
                 if (val.has_value()) {
                         // Track the amount of numbers read that == the expected
-                        std::cout << val.value() << "\n";
-                        if (checker == count) {
+                        if (checker == val.value()) {
                                 checker++;
                         }
                         count++;
@@ -124,7 +123,7 @@ void doSomeConsuming(ring_buffer<T, N> &rb, int &checker) {
 
 template <typename T, std::size_t N>
 void doSomeProducing(ring_buffer<T, N> &rb) {
-        size_t localHead = 0;
+        size_t localHead = rb.headIdx.load(std::memory_order_acquire);
         int count = 0;
 
         while (count < MAGIC_WORK_NUMBER) {
@@ -137,16 +136,16 @@ void doSomeProducing(ring_buffer<T, N> &rb) {
 }
 
 int main() {
-        ring_buffer<int, 1ULL << 16> rb;
+        ring_buffer<int, 1ULL << 7> rb;
 
         alignas(std::hardware_destructive_interference_size) int checker = 0;
         for (int i = 0; i < 10; i++) {
                 // Start thread work
                 auto start = std::chrono::steady_clock::now();
                 // Unsigned Long Long 1 shifted left 63 times, 2^63
-                std::thread producer(doSomeProducing<int, 1ULL << 16>,
+                std::thread producer(doSomeProducing<int, 1ULL << 7>,
                                      std::ref(rb));
-                std::thread consumer(doSomeConsuming<int, 1ULL << 16>,
+                std::thread consumer(doSomeConsuming<int, 1ULL << 7>,
                                      std::ref(rb), std::ref(checker));
 
                 // Then Join
