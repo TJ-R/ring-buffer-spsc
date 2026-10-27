@@ -13,30 +13,32 @@
 template <typename T, std::size_t N> struct ring_buffer {
         static_assert(N > 0 && (N & (N - 1)) == 0,
                       "N must be power of 2 smaller than size_t.");
-        // Using uint8_t just for size constraint
-        //
+
+        static_assert(N < (1ULL << 32), "N must be smaller than 2^32");
+
+        // Might as well use size_t since cache lines are 64 bytes apart
         // both counters are on separate cache lines
         // Starts on cacheline as per hardware descripiton
         alignas(std::hardware_destructive_interference_size)
-            std::atomic<uint8_t> headIdx = 0;
+            std::atomic<size_t> headIdx = 0;
 
         // Starts on cacheline as per hardware descripiton
         alignas(std::hardware_destructive_interference_size)
-            std::atomic<uint8_t> tailIdx = 0;
+            std::atomic<size_t> tailIdx = 0;
 
         // static constexpr std::size_t capacity = 2 << N;
         // Start this on its own cache line as well other wise it shares
         // a line with tailIdx on first 15 values
         alignas(
-            std::hardware_destructive_interference_size) std::array<T, 128> buf;
+            std::hardware_destructive_interference_size) std::array<T, N> buf;
 
         alignas(std::hardware_destructive_interference_size)
-            const uint8_t capacity = 128;
+            const size_t capacity = N;
 };
 
 // template <typename T, std::size_t N = 64>
 template <typename T, std::size_t N>
-bool ring_buffer_push(ring_buffer<T, N> &rb, T ins, uint8_t &localHead) {
+bool ring_buffer_push(ring_buffer<T, N> &rb, T ins, size_t &localHead) {
         // write the push logic
 
         // producer thread can do relaxed read to tail index
@@ -75,7 +77,7 @@ bool ring_buffer_push(ring_buffer<T, N> &rb, T ins, uint8_t &localHead) {
 };
 
 template <typename T, std::size_t N>
-std::optional<T> ring_buffer_pop(ring_buffer<T, N> &rb, uint8_t &localTail) {
+std::optional<T> ring_buffer_pop(ring_buffer<T, N> &rb, size_t &localTail) {
         // write the pop logic
 
         // consumer thread can do relaxed read to head index
@@ -103,14 +105,18 @@ std::optional<T> ring_buffer_pop(ring_buffer<T, N> &rb, uint8_t &localTail) {
 };
 
 template <typename T, std::size_t N>
-void doSomeConsuming(ring_buffer<T, N> &rb) {
-        uint8_t localTail = 0;
+void doSomeConsuming(ring_buffer<T, N> &rb, int &checker) {
+        size_t localTail = 0;
         int count = 0;
 
         while (count < MAGIC_WORK_NUMBER) {
                 std::optional<int> val = ring_buffer_pop(rb, localTail);
                 if (val.has_value()) {
                         // Track the amount of numbers read that == the expected
+                        std::cout << val.value() << "\n";
+                        if (checker == count) {
+                                checker++;
+                        }
                         count++;
                 }
         }
@@ -118,7 +124,7 @@ void doSomeConsuming(ring_buffer<T, N> &rb) {
 
 template <typename T, std::size_t N>
 void doSomeProducing(ring_buffer<T, N> &rb) {
-        uint8_t localHead = 0;
+        size_t localHead = 0;
         int count = 0;
 
         while (count < MAGIC_WORK_NUMBER) {
@@ -131,16 +137,17 @@ void doSomeProducing(ring_buffer<T, N> &rb) {
 }
 
 int main() {
-        ring_buffer<int, 1ULL << 63> rb;
+        ring_buffer<int, 1ULL << 16> rb;
 
+        alignas(std::hardware_destructive_interference_size) int checker = 0;
         for (int i = 0; i < 10; i++) {
                 // Start thread work
                 auto start = std::chrono::steady_clock::now();
                 // Unsigned Long Long 1 shifted left 63 times, 2^63
-                std::thread producer(doSomeProducing<int, 1ULL << 63>,
+                std::thread producer(doSomeProducing<int, 1ULL << 16>,
                                      std::ref(rb));
-                std::thread consumer(doSomeConsuming<int, 1ULL << 63>,
-                                     std::ref(rb));
+                std::thread consumer(doSomeConsuming<int, 1ULL << 16>,
+                                     std::ref(rb), std::ref(checker));
 
                 // Then Join
                 producer.join();
@@ -149,6 +156,12 @@ int main() {
 
                 std::chrono::duration<double, std::milli> elapsed = end - start;
                 std::cout << "Duration of work: " << elapsed.count() << "\n";
+
+                if (checker == MAGIC_WORK_NUMBER) {
+                        std::cout << "Consumer Result is good.\n";
+                }
+
+                checker = 0;
 
                 // Does not block the two threads from running at the same time.
                 // Need to join or program will crash. C++20 jthread solves this
