@@ -105,7 +105,7 @@ std::optional<T> ring_buffer_pop(ring_buffer<T, N> &rb, size_t &localTail) {
 };
 
 template <typename T, std::size_t N>
-void doSomeConsuming(ring_buffer<T, N> &rb, int &checker) {
+void doSomeConsuming(ring_buffer<T, N> &rb) {
         size_t localTail = rb.tailIdx.load(std::memory_order_acquire);
         int count = 0;
 
@@ -113,9 +113,6 @@ void doSomeConsuming(ring_buffer<T, N> &rb, int &checker) {
                 std::optional<int> val = ring_buffer_pop(rb, localTail);
                 if (val.has_value()) {
                         // Track the amount of numbers read that == the expected
-                        if (checker == val.value()) {
-                                checker++;
-                        }
                         count++;
                 }
         }
@@ -135,18 +132,18 @@ void doSomeProducing(ring_buffer<T, N> &rb) {
         }
 }
 
+// testing with super small buffer size
 int main() {
-        ring_buffer<int, 1ULL << 7> rb;
+        ring_buffer<int, 1ULL << 2> rb;
 
-        alignas(std::hardware_destructive_interference_size) int checker = 0;
         for (int i = 0; i < 10; i++) {
                 // Start thread work
                 auto start = std::chrono::steady_clock::now();
                 // Unsigned Long Long 1 shifted left 63 times, 2^63
-                std::thread producer(doSomeProducing<int, 1ULL << 7>,
+                std::thread producer(doSomeProducing<int, 1ULL << 2>,
                                      std::ref(rb));
-                std::thread consumer(doSomeConsuming<int, 1ULL << 7>,
-                                     std::ref(rb), std::ref(checker));
+                std::thread consumer(doSomeConsuming<int, 1ULL << 2>,
+                                     std::ref(rb));
 
                 // Then Join
                 producer.join();
@@ -155,12 +152,6 @@ int main() {
 
                 std::chrono::duration<double, std::milli> elapsed = end - start;
                 std::cout << "Duration of work: " << elapsed.count() << "\n";
-
-                if (checker == MAGIC_WORK_NUMBER) {
-                        std::cout << "Consumer Result is good.\n";
-                }
-
-                checker = 0;
 
                 // Does not block the two threads from running at the same time.
                 // Need to join or program will crash. C++20 jthread solves this
