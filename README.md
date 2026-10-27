@@ -23,8 +23,21 @@ to determine performance imporvements
 
 ## Performance Metrics
 
+### Perf
+
+#### Perf C2C
+perf c2c record -- ./time_test
+
+I have a 5800x3D so unfortunately perf c2c does not work well with zen 3.
+
+### Thread Sanitizer
+
+g++ -fsanitize=thread -g -O1 -o tsan_test main.cpp \
+currently no issues with threads according to this
+
 ### Consecutive Iterations \ (time diff between subsequent runs of the same work back to back)
 
+g++ main.cpp -std=c++20 -O2 -Wall -Wextra -Wconversion -o time_test
 Work: Adding 100,000,000 values to the queue via the producer and consumer\
 should read all of these out in order then push to vector
 
