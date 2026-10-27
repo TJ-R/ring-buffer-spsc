@@ -149,3 +149,19 @@ Consumer Result is good.\
 Starting threads\
 Duration of work: 2295.1\
 Consumer Result is good.\
+
+##### Removed the checker, cycle code, and lot of cout
+
+Mins are lowest I've seen going to focus on generalizing first before more \
+profiling. \
+
+Duration of work: 2252.86 \
+Duration of work: 1384.26 \
+Duration of work: 1476.62 \
+Duration of work: 1422.04 \
+Duration of work: 2080.61 \
+Duration of work: 2249.45 \
+Duration of work: 2338.72 \
+Duration of work: 1257.23 \
+Duration of work: 2429 \
+Duration of work: 1439
