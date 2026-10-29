@@ -176,10 +176,17 @@ perf c2c record -- ./time_test
 
 I have a 5800x3D so unfortunately perf c2c does not work well with zen 3.
 
-### Thread Sanitizer
+### Thread Sanitizer, Address Sanitizer, Undefined Sanitizer
 
 g++ -fsanitize=thread -g -O1 -o tsan_test main.cpp \
 currently no issues with threads according to this
+
+g++ -std=c++20 -O1 -g \
+      -fsanitize=address,undefined \
+      -fno-omit-frame-pointer \
+      main.cpp -o ABUSan
+
+no issues when running this executable
 
 ### Consecutive Iterations \ (time diff between subsequent runs of the same work back to back)
 
