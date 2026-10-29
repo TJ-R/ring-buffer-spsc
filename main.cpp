@@ -86,17 +86,17 @@ template <typename T> class ring_buffer {
         alignas(64) std::atomic<size_t> tailIdx{0};
 
       private:
+        alignas(64) std::size_t m_capacity;
+        std::size_t m_mask;
+        slot<T> *m_buf;
         static constexpr std::size_t buffer_alignment = alignof(T) > 64
                                                             ? alignof(T)
                                                             : 64;
-
-        std::size_t m_capacity;
-        std::size_t m_mask;
-        slot<T> *m_buf;
 };
 
 template <typename T>
-bool ring_buffer_push(ring_buffer<T> &rb, T ins, size_t &localHead) {
+bool ring_buffer_push(ring_buffer<T> &rb, T ins, size_t &localHead,
+                      size_t &failedInsert) {
         // write the push logic
 
         // producer thread can do relaxed read to tail index
@@ -124,6 +124,7 @@ bool ring_buffer_push(ring_buffer<T> &rb, T ins, size_t &localHead) {
                 // to to do. I.e. let it be stale no risk since tail
                 // will always be "ahead" of the head. This is so we can
                 // reduce cache misses
+                failedInsert++;
                 return false;
         }
 
@@ -137,7 +138,8 @@ bool ring_buffer_push(ring_buffer<T> &rb, T ins, size_t &localHead) {
 };
 
 template <typename T>
-std::optional<T> ring_buffer_pop(ring_buffer<T> &rb, size_t &localTail) {
+std::optional<T> ring_buffer_pop(ring_buffer<T> &rb, size_t &localTail,
+                                 size_t &failedPop) {
         // write the pop logic
 
         // consumer thread can do relaxed read to head index
@@ -154,6 +156,8 @@ std::optional<T> ring_buffer_pop(ring_buffer<T> &rb, size_t &localTail) {
         // If truly empty then return
         if (localTail == headIdx) {
                 // Same as push
+                failedPop++;
+                std::this_thread::yield();
                 return std::nullopt;
         }
 
@@ -164,12 +168,28 @@ std::optional<T> ring_buffer_pop(ring_buffer<T> &rb, size_t &localTail) {
         return val;
 };
 
-template <typename T> void doSomeConsuming(ring_buffer<T> &rb) {
+template <typename T>
+void doSomeProducing(ring_buffer<T> &rb, size_t &failedInsert) {
+        size_t localHead = rb.headIdx.load(std::memory_order_acquire);
+        int count = 0;
+
+        while (count < MAGIC_WORK_NUMBER) {
+                bool res = ring_buffer_push(rb, count, localHead, failedInsert);
+
+                if (res) {
+                        count++;
+                }
+        }
+};
+
+template <typename T>
+void doSomeConsuming(ring_buffer<T> &rb, size_t &failedPop) {
         size_t localTail = rb.tailIdx.load(std::memory_order_acquire);
         int count = 0;
 
         while (count < MAGIC_WORK_NUMBER) {
-                std::optional<T> val = ring_buffer_pop(rb, localTail);
+                std::optional<T> val =
+                    ring_buffer_pop(rb, localTail, failedPop);
                 if (val.has_value()) {
                         assert(val.value() == count);
                         // Track the amount of numbers read that == the
@@ -177,36 +197,32 @@ template <typename T> void doSomeConsuming(ring_buffer<T> &rb) {
                         count++;
                 }
         }
-}
-
-template <typename T> void doSomeProducing(ring_buffer<T> &rb) {
-        size_t localHead = rb.headIdx.load(std::memory_order_acquire);
-        int count = 0;
-
-        while (count < MAGIC_WORK_NUMBER) {
-                bool res = ring_buffer_push(rb, count, localHead);
-
-                if (res) {
-                        count++;
-                }
-        }
-}
+};
 
 // testing with super small buffer size
 int main() {
         ring_buffer<int> rb(1ULL << 32);
+        size_t failedInsert = 0;
+        size_t failedPop = 0;
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1; i++) {
                 // Start thread work
                 auto start = std::chrono::steady_clock::now();
                 // Unsigned Long Long 1 shifted left 63 times, 2^63
-                std::thread producer(doSomeProducing<int>, std::ref(rb));
-                std::thread consumer(doSomeConsuming<int>, std::ref(rb));
+                std::thread producer(doSomeProducing<int>, std::ref(rb),
+                                     std::ref(failedInsert));
+                std::thread consumer(doSomeConsuming<int>, std::ref(rb),
+                                     std::ref(failedPop));
 
                 // Then Join
                 producer.join();
                 consumer.join();
                 auto end = std::chrono::steady_clock::now();
+
+                std::cout << "Failed Inserts (Producer/Full): " << failedInsert
+                          << "\n";
+                std::cout << "Failed Pops (Consumer/Empty): " << failedPop
+                          << "\n";
 
                 std::chrono::duration<double, std::milli> elapsed = end - start;
                 std::cout << "Duration of work: " << elapsed.count() << "\n";

@@ -63,6 +63,113 @@ Duration of work: 940.599
 
        0.935136724 +- 0.013580706 seconds time elapsed  ( +-  1.45% )
 
+##### Insane Performance Gain 
+
+Got rid of false sharing on private variables by alignas(64) top one to put
+it on new cache line
+
+Also recorded how many times I hit full vs empty. Was always at empty never full
+using std::this_thread::yield(); to stall consumer a bit cut time to 1/3rd.
+
+Was originally trying padding and times jumped from 0.9s to 2.5s due to decreased false sharing
+time but significantly increasted dead cycles on the consumer side of things
+
+From padding without yield to padding with yield is 2.27s -> 0.139s avg
+
+###### No yield in consumer
+
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 542622831
+Duration of work: 2903.83
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 429629640
+Duration of work: 2514.59
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 414099278
+Duration of work: 2230.3
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 461193278
+Duration of work: 2391.73
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 383070268
+Duration of work: 2073.73
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 284631799
+Duration of work: 1671.25
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 388592462
+Duration of work: 2338.21
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 507773464
+Duration of work: 2703.45
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 473045503
+Duration of work: 2340.79
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 250970499
+Duration of work: 1537.45
+
+ Performance counter stats for './time_test' (10 runs):
+
+               285      context-switches                 #     62.8 cs/sec  cs_per_second       ( +- 23.93% )
+                 5      cpu-migrations                   #      1.1 migrations/sec  migrations_per_second  ( +- 16.55% )
+               340      page-faults                      #     74.9 faults/sec  page_faults_per_second  ( +-  0.13% )
+          4,540.45 msec task-clock                       #      nan CPUs  CPUs_utilized         ( +-  5.88% )
+        41,197,419      branch-misses                    #      2.3 %  branch_miss_rate         ( +-  5.53% )  (49.94%)
+     1,801,063,049      branches                         #    396.7 M/sec  branch_frequency     ( +-  4.97% )  (66.68%)
+    20,307,522,592      cpu-cycles                       #      4.5 GHz  cycles_frequency       ( +-  5.88% )  (66.71%)
+     6,332,250,531      instructions                     #      0.3 instructions  insn_per_cycle  ( +-  3.48% )  (66.72%)
+       952,191,204      stalled-cycles-frontend          #     0.05 frontend_cycles_idle        ( +-  6.13% )  (66.71%)
+
+       2.272504602 +- 0.133715170 seconds time elapsed  ( +-  5.88% )
+
+###### Yield in consumer 
+
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 160279
+Duration of work: 139.1
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 156776
+Duration of work: 139.328
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 148540
+Duration of work: 136.519
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 148159
+Duration of work: 135.931
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 146794
+Duration of work: 136.798
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 145164
+Duration of work: 135.667
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 153380
+Duration of work: 136.743
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 144450
+Duration of work: 134.182
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 148395
+Duration of work: 136.208
+Failed Inserts (Producer/Full): 0
+Failed Pops (Consumer/Empty): 155186
+Duration of work: 139.004
+
+ Performance counter stats for './time_test' (10 runs):
+
+                37      context-switches                 #    134.4 cs/sec  cs_per_second       ( +- 13.23% )
+                 4      cpu-migrations                   #     14.5 migrations/sec  migrations_per_second  ( +- 22.06% )
+               340      page-faults                      #   1235.4 faults/sec  page_faults_per_second  ( +-  0.12% )
+            275.22 msec task-clock                       #      nan CPUs  CPUs_utilized         ( +-  0.39% )
+         4,772,424      branch-misses                    #      0.9 %  branch_miss_rate         ( +-  1.11% )  (49.70%)
+       535,332,493      branches                         #   1945.1 M/sec  branch_frequency     ( +-  0.21% )  (67.03%)
+     1,205,315,608      cpu-cycles                       #      4.4 GHz  cycles_frequency       ( +-  0.50% )  (67.06%)
+     2,947,972,122      instructions                     #      2.4 instructions  insn_per_cycle  ( +-  0.10% )  (67.12%)
+        56,062,823      stalled-cycles-frontend          #     0.05 frontend_cycles_idle        ( +-  1.11% )  (66.82%)
+
+       0.139013541 +- 0.000516548 seconds time elapsed  ( +-  0.37% )
+
 #### Perf C2C
 
 perf c2c record -- ./time_test
