@@ -25,7 +25,46 @@ to determine performance imporvements
 
 ### Perf
 
+#### Perf Stat
+
+perf stat -e cycles,instructions,ls_dmnd_fills_from_sys.int_cache,ls_dmnd_fills_from_sys.ext_cache_local -r 10 ./time_test
+
+##### Previous Impl
+
+Durations were about the same as below in the Consecutive Iters.\
+About ~2600ms\
+
+25,896,466,685      cycles                                                                  ( +-  2.87% ) \
+12,947,334,486      instructions                                                            ( +-  3.88% ) \
+   118,076,551      ls_dmnd_fills_from_sys.int_cache                                        ( +-  2.50% ) \
+             0      ls_dmnd_fills_from_sys.ext_cache_local\
+\
+       2.873395750 +- 0.080439412 seconds time elapsed  ( +-  2.80% )
+
+##### Update Impl
+
+Duration of work: 914.7
+Duration of work: 914.876
+Duration of work: 948.761
+Duration of work: 869.304
+Duration of work: 950.598
+Duration of work: 989.531
+Duration of work: 867.145
+Duration of work: 988.96
+Duration of work: 957.153
+Duration of work: 940.599
+
+ Performance counter stats for './time_test' (10 runs):
+
+     8,230,386,473      cycles                                                                  ( +-  1.44% )
+     3,370,647,928      instructions                                                            ( +-  1.33% )
+        64,891,543      ls_dmnd_fills_from_sys.int_cache                                        ( +-  1.25% )
+                 0      ls_dmnd_fills_from_sys.ext_cache_local
+
+       0.935136724 +- 0.013580706 seconds time elapsed  ( +-  1.45% )
+
 #### Perf C2C
+
 perf c2c record -- ./time_test
 
 I have a 5800x3D so unfortunately perf c2c does not work well with zen 3.
@@ -178,3 +217,26 @@ Duration of work: 2338.72 \
 Duration of work: 1257.23 \
 Duration of work: 2429 \
 Duration of work: 1439
+
+##### Back after a large refactor. Testing with different capacities
+
+###### 4 (2^2)
+
+Average time: 3510.407 for 10 runs
+
+###### 64 (2^6)
+
+Average time: 953.0891 across 10 runs
+
+###### 1024 (2^10)
+
+Average time: 922.1099 for 10 runs
+
+###### 32768 (2^15)
+
+Average time: 1025.4856 for 10 runs
+
+###### 2^32 (16GB for ints)
+
+Average time: 958.9644
+min: 906.878
