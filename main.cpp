@@ -29,8 +29,9 @@ template <typename T> class ring_buffer {
 
                 // Choose buffer_alignment to be size of T if greater than 64
                 // 64 is the most common cache line size
-                m_buf = static_cast<slot<T> *>(::operator new(
-                    sizeof(T) * capacity, std::align_val_t{buffer_alignment}));
+                m_buf = static_cast<slot<T> *>(
+                    ::operator new(sizeof(slot<T>) * capacity,
+                                   std::align_val_t{buffer_alignment}));
         }
 
         // Freeing the buffer
